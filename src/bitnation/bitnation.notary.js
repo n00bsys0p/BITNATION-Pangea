@@ -32,7 +32,7 @@ var jQuery = require('jquery');
 
         var _verifyNotaryUri = function (uri) {
             // Arbitrary safe uri max length of 100 for now
-            var maxLength = 100;
+            var maxLength = 255;
 
             var accepted = (
                 uri !== undefined &&
@@ -58,13 +58,10 @@ var jQuery = require('jquery');
             }
 
             var protoMsg = Bitnation.core.ProtocolMessage();
-
-            var message = (messageTx.message === undefined) ?
-                protoMsg.fromString(messageTx.decryptedMessage) :
-                protoMsg.fromString(messageTx.message);
-
-            if (message.bitnation === undefined) {
-                deferred.reject(invalidMessageErr);
+            try {
+                var message = protoMsg.fromMessageTx(messageTx);
+            } catch (err) {
+                return deferred.reject(err);
             }
 
             // Find the tx itself
@@ -94,7 +91,6 @@ var jQuery = require('jquery');
 
         /**
          * Retrieve and parse a notary hash record
-         * @todo: Private / encrypted
          */
         notaryService.retrieveNotary = function (txId, secretPhrase) {
             var deferred = $.Deferred();
@@ -118,6 +114,53 @@ var jQuery = require('jquery');
             });
 
             return deferred;
+        };
+
+        /**
+         * Get all of a user's notarized documents
+         */
+        notaryService.getDocumentsForUser = function (account, limit) {
+            limit = limit || 10;
+
+            var deferred = $.Deferred();
+
+            _hzClient.getMessages(account)
+            .done(function (msgList) {
+                var parsedMessages = [];
+
+                var protoMsg = new Bitnation.core.ProtocolMessage();
+
+                for (var i = 0; i < msgList.length; i++) {
+                    if (i >= limit - 1) {
+                        break;
+                    }
+
+                    try {
+                        var message = protoMsg.fromMessageAttachment(
+                            msgList[i].attachment
+                        );
+
+                        if (message.notary !== undefined) {
+                            parsedMessages.push({
+                                date: _hzClient.timestampToDate(
+                                    msgList[i].blockTimestamp
+                                ),
+                                message: message
+                            });
+                        }
+                    } catch (err) {
+                        // Do nothing...
+                    }
+                }
+
+                deferred.resolve(parsedMessages);
+
+            })
+            .fail(function (err) {
+                deferred.reject(err);
+            });
+
+            return deferred.promise();
         };
 
         /**
@@ -155,17 +198,20 @@ var jQuery = require('jquery');
                     _hzClient.sendMessage(
                         message.accountRS, message.toString(), secretPhrase, isPrivate
                     ).done(function (result) {
-                        var tx = result.transactionJSON;
-
                         var response = {
-                            blockHeight: tx.ecBlockHeight,
-                            txId: tx.transaction
+                            txId: result.transaction
                         };
 
-                        response.message = (tx.attachment.encryptedMessage === undefined) ?
-                            tx.attachment.message : 'encrypted';
+                        _hzClient.getTransaction(response.txId)
+                        .done(function (result) {
+                            response.message = (result.attachment.encryptedMessage === undefined) ?
+                                result.attachment.message : 'encrypted';
 
-                        deferred.resolve(response);
+                            deferred.resolve(response);
+                        })
+                        .fail(function (err) {
+                            deferred.reject(err);
+                        });
 
                     })
                     .fail(function (err) {

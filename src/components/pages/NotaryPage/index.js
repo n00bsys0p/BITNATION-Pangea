@@ -16,6 +16,10 @@ var Results = require('../../layout/Results');
 
 var _ = require('lodash');
 
+var Bitnation = require('../../../bitnation/bitnation.pangea');
+
+var ui = new Bitnation.pangea.UI();
+
 module.exports = React.createClass({
   displayName: nameHelper.displayName,
   mixins: bitnMixins,
@@ -23,6 +27,18 @@ module.exports = React.createClass({
     cursor: React.PropTypes.object.isRequired,
     notary: React.PropTypes.object.isRequired,
     dispatch: React.PropTypes.func.isRequired
+  },
+  getInitialState: function() {
+    var user = ui.getCurrentUser();
+    return {
+      myAccountRS: user.accountRS,
+      myDocuments: []
+    };
+  },
+  componentWillMount: function() {
+    ui.getDocuments(this.state.myAccountRS)
+      .done(this.onDocuments)
+      .fail(this.onFail);
   },
   render: function() {
     var cursor = this.props.cursor;
@@ -54,10 +70,7 @@ module.exports = React.createClass({
             <PageSection flex={3}>
               <Results title='Your latest registered documents'>
                 <Table head={['Document digest', 'Timestamp']}
-                  body={[
-                    ['34444GDE6M912323', '232F047E6M932'],
-                    ['F04GDE6M9', '23F04GDE6M9232']
-                  ]} />
+                  body={this.state.myDocuments} />
               </Results>
             </PageSection>
 
@@ -98,5 +111,48 @@ module.exports = React.createClass({
         </div>
       </div>
     );
+  },
+  onDocuments: function (documents) {
+    if (documents.length > 0) {
+
+      var docTable = [];
+
+      documents.forEach(function (item) {
+        docTableRow = [];
+
+        if (item.message.notary.uri !== undefined) {
+          var uri = item.message.notary.uri;
+          var protocol = uri.split(':')[0];
+
+          // Add links to any notary docs that have a URI
+          if (
+              (protocol === 'http' || protocol === 'https' || protocol === 'ftp')
+            &&
+              (uri.split('.').length >= 2)
+          ) {
+            docTableRow.push(
+              <a
+                href={item.message.notary.uri}
+                target={'_blank'}
+              >{item.message.notary.hash}</a>
+            );
+          } else {
+            docTableRow.push(item.message.notary.hash);
+          }
+        } else {
+          docTableRow.push(item.message.notary.hash);
+        }
+
+        docTableRow.push(item.date.toUTCString());
+        docTable.push(docTableRow);
+      });
+
+      this.setState({
+        myDocuments: docTable
+      });
+    }
+  },
+  onFail: function (err) {
+    console.error(err);
   }
 });

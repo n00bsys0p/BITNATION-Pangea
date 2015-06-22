@@ -33,6 +33,23 @@ var Bitnation = (function (Bitnation) {
         };
 
         /**
+         * Parse from a full Horizon message transaction
+         */
+        message.fromMessageAttachment = function (messageAttachment) {
+
+            var message = (messageAttachment.message === undefined) ?
+                this.fromString(messageAttachment.decryptedMessage) :
+                this.fromString(messageAttachment.message);
+
+            if (message.bitnation === undefined) {
+                throw _ERR_INVALID_MESSAGE;
+            }
+
+            return message;
+
+        };
+
+        /**
          * Parse a message string
          */
         message.fromString = function (data) {

@@ -47,6 +47,8 @@ module.exports = React.createClass({
       uri: cursor.get('uri'),
       secret: cursor.get('secret')
     };
+    cursor.set('secret', null);
+    cursor.set('uri', null);
     this.props.dispatch(uploadMessage(options));
   }
 });

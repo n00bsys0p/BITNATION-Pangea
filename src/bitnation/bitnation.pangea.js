@@ -128,6 +128,13 @@ var jQuery = require('jquery');
         };
 
         /**
+         * Return a user's notarized documents
+         */
+        uiService.getDocuments = function (account) {
+            return _notaryService.getDocumentsForUser(account);
+        };
+
+        /**
          * Get a list of messages for an account on the HZ blockchain.
          */
         uiService.getMail = function (account) {
