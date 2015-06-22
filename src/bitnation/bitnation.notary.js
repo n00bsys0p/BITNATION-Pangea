@@ -117,7 +117,8 @@ var jQuery = require('jquery');
         };
 
         /**
-         * Get all of a user's notarized documents
+         * Get up to a given number of a user's notarized documents.
+         * Defaults to 10.
          */
         notaryService.getDocumentsForUser = function (account, limit) {
             limit = limit || 10;

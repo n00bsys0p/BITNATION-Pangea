@@ -32,7 +32,8 @@ module.exports = React.createClass({
     var user = ui.getCurrentUser();
     return {
       myAccountRS: user.accountRS,
-      myDocuments: []
+      myDocuments: [],
+      searchDocuments: []
     };
   },
   componentWillMount: function() {
@@ -68,7 +69,7 @@ module.exports = React.createClass({
 
           <PageRow>
             <PageSection flex={3}>
-              <Results title='Your latest registered documents'>
+              <Results title='Your latest registered public documents'>
                 <Table head={['Document digest', 'Timestamp']}
                   body={this.state.myDocuments} />
               </Results>
@@ -84,15 +85,12 @@ module.exports = React.createClass({
           </PageRow>
 
           <PageRow>
-            <PageSection flex={1} title='Search for public documents'>
-              <Search />
+            <PageSection flex={1} title="Find another user's public timestamps">
+              <Search placeholder={'Horizon address'} onSubmit={this.onSearchSubmit} />
 
               <Results title='Search results'>
                 <Table head={['Document digest', 'Timestamp']}
-                  body={[
-                    ['34444GDE6M912323', '232F047E6M932'],
-                    ['F04GDE6M9', '23F04GDE6M9232']
-                  ]} />
+                  body={this.state.searchDocuments} />
               </Results>
             </PageSection>
 
@@ -100,11 +98,8 @@ module.exports = React.createClass({
               <Search />
 
               <Results title='Search results'>
-                <Table head={['Document digest', 'Timestamp']}
-                  body={[
-                    ['34444GDE6M912323', '232F047E6M932'],
-                    ['F04GDE6M9', '23F04GDE6M9232']
-                  ]} />
+                <Table head={['Document digest (due @ beta)', 'Timestamp (due @ beta)']}
+                  body={[ ]} />
               </Results>
             </PageSection>
           </PageRow>
@@ -154,5 +149,36 @@ module.exports = React.createClass({
   },
   onFail: function (err) {
     console.error(err);
+  },
+  onSearchSubmit: function (accountRS) {
+    var address = new Bitnation.horizon.Address(accountRS);
+
+    if (!address.accountRS) {
+      return alert('You need to enter a Horizon account ID.');
+    }
+
+    ui.getDocuments(address.accountRS)
+      .done(this.onSearchSuccess)
+      .fail(this.onFail);
+  },
+  onSearchSuccess: function (documents) {
+
+    var tableDocs = [];
+
+    if (documents.length > 0) {
+      documents.forEach(function (doc) {
+        var fullHash = doc.message.notary.hash;
+        var firstHalf = fullHash.substring(0, parseInt(fullHash.length / 2));
+        var secondHalf = fullHash.substring(parseInt(fullHash.length / 2), fullHash.length);
+
+        var splitHalves = firstHalf + ' ' + secondHalf;
+        tableDocs.push([splitHalves, doc.date.toUTCString()]);
+      });
+    }
+
+    this.setState({
+      searchDocuments: tableDocs
+    });
+
   }
 });

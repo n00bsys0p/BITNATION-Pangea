@@ -34,12 +34,15 @@ module.exports = wrapImmutables(React.createClass({
       nameHelper.className,
       this.props.className,
       nameHelper.state({ focus: this.state.focus }));
-    
+
     return (
       <form className={className} onSubmit={this.onSubmit}>
         <div>
-          <Input value={this.state.value} onChange={this.onChange}
-            onFocus={this.onFocus} onBlur={this.onBlur} />
+          <Input value={this.state.value}
+            onChange={this.onChange}
+            onFocus={this.onFocus}
+            onBlur={this.onBlur}
+            placeholder={this.props.placeholder || ''} />
         </div>
 
         {this.props.button !== false &&
